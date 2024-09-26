@@ -14,14 +14,16 @@
 
 import socket
 import sys
-
 import rclpy
 
+from nmea_msgs.msg import Sentence
 from libnmea_navsat_driver.driver import Ros2NMEADriver
 
 def main(args=None):
     rclpy.init(args=args)
+
     driver = Ros2NMEADriver()
+    nmea_pub = driver.create_publisher(Sentence, "nmea_sentence", 10)
 
     try:
         gnss_ip = driver.declare_parameter('ip', '192.168.131.22').value
@@ -65,11 +67,12 @@ def main(args=None):
 
                 for data in full_lines:
                     try:
-                        driver.add_sentence(data, frame_id)
-                        # if driver.add_sentence(data, frame_id):
-                        #     driver.get_logger().info("Received sentence: %s" % data)
-                        # else:
-                        #     driver.get_logger().warn("Error with sentence: %s" % data)
+                        sentence = Sentence()
+                        sentence.header.stamp = driver.get_clock().now().to_msg()
+                        sentence.header.frame_id = frame_id
+                        sentence.sentence = data
+                        nmea_pub.publish(sentence)
+                        
                     except ValueError as e:
                         driver.get_logger().warn(
                             "Value error, likely due to missing fields in the NMEA message. "
