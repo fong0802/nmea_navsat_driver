@@ -221,6 +221,10 @@ class Ros2NMEADriver(Node):
 
             # Only publish a fix from RMC if the use_RMC flag is set.
             if self.use_RMC:
+
+                if self.use_GNSS_time:
+                    current_fix.header.stamp = rclpy.time.Time(seconds=data['utc_time'][0], nanoseconds=data['utc_time'][1]).to_msg()
+
                 if data['fix_valid']:
                     current_fix.status.status = NavSatStatus.STATUS_FIX
                 else:
@@ -251,7 +255,12 @@ class Ros2NMEADriver(Node):
             # Publish velocity from RMC regardless, since GGA doesn't provide it.
             if data['fix_valid']:
                 current_vel = TwistStamped()
-                current_vel.header.stamp = current_time
+
+                if self.use_GNSS_time:
+                    current_vel.header.stamp = rclpy.time.Time(seconds=data['utc_time'][0], nanoseconds=data['utc_time'][1]).to_msg()
+                else:
+                    current_vel.header.stamp = current_time
+                    
                 current_vel.header.frame_id = frame_id
                 current_vel.twist.linear.x = data['speed'] * math.sin(data['true_course'])
                 current_vel.twist.linear.y = data['speed'] * math.cos(data['true_course'])
